@@ -20,6 +20,10 @@ obs_odom.header.frame_id="map"
 obs_odom.child_frame_id="obstacle"
 
 
+def obs_pose_init_callback(msg):
+    global obs_odom
+    obs_odom=msg
+    return
 
 def png_reader():
     map_image = cv2.imread('/home/hgnaseel/catkin_ws/src/pseudo_lidar_sim/pl_visualizer/data/map.png', cv2.IMREAD_GRAYSCALE)
@@ -110,6 +114,7 @@ def main():
 
     rospy.init_node('map_generator', anonymous=True)
 
+    sub_obstacle = rospy.Subscriber("/obstacle_init", Odometry, obs_pose_init_callback)
 
     rate = rospy.Rate(100) # 10hz
     for i in range(10):

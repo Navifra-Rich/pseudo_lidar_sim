@@ -103,7 +103,7 @@ Visualization Manager:
           Value: true
         Value: true
       Enabled: true
-      Keep: 100
+      Keep: 10
       Name: Odometry
       Position Tolerance: 0.10000000149011612
       Queue Size: 10
@@ -111,7 +111,7 @@ Visualization Manager:
         Alpha: 1
         Axes Length: 1
         Axes Radius: 0.10000000149011612
-        Color: 52; 101; 164
+        Color: 239; 41; 41
         Head Length: 0.30000001192092896
         Head Radius: 0.20000000298023224
         Shaft Length: 1
@@ -186,7 +186,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05000000074505806
       Style: Flat Squares
-      Topic: /sibal
+      Topic: /pseudo_scan
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -218,7 +218,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.565000295639038
+      Angle: -1.5450003147125244
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -228,7 +228,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 104.48268127441406
+      Scale: 86.76204681396484
       Target Frame: <Fixed Frame>
       X: 1.2405226230621338
       Y: -2.008051872253418

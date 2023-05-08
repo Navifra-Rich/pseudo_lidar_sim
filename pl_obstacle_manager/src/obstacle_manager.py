@@ -18,9 +18,10 @@ import random
 
 
 # ------------------------------ Param ------------------------------------
-SIZEX = 1.9
-SIZEY = 0.6
-LASER_RANGE = 100.0
+SIZEX = rospy.get_param("obstacle_size_x")
+SIZEY = rospy.get_param("obstacle_size_y")
+LASER_RANGE = rospy.get_param("laser_range")
+
 class Object:
     def __init__(self):
         self.odom = Odometry()
@@ -39,15 +40,14 @@ robot = Object()
 
 ray_x = []
 ray_y = []
+
 def getRays():
-    # 거리 값 배열 생성
     for i in range(0, 629):
         ray_x.append(LASER_RANGE*math.cos(i/100))  # 거리 값은 10으로 설정
         ray_y.append(LASER_RANGE*math.sin(i/100))  # 거리 값은 10으로 설정
-
     return ray_x, ray_y
 
-def obs_odom_callback(msg):
+def obs_pose_init_callback(msg):
     obstacle.odom=msg
     return
 
@@ -116,7 +116,6 @@ def collision_check(robot, corner):
     for i in range(len(ray_x)):
         min_dist = 99999
         scanned_points = None
-        # print("HERE")
         pos = line_intersection(robot.x, robot.y, ray_x[i], ray_y[i], corner[0,0], corner[1,0], corner[0,1], corner[1,1])
         if pos is not None:
             dist = (pos[0]-robot.x)*(pos[0]-robot.x)+(pos[1]-robot.y)*(pos[1]-robot.y)
@@ -145,7 +144,6 @@ def collision_check(robot, corner):
         if scanned_points is not None:
             scan_array.append(scanned_points)
 
-    # print(scan_array)
     return scan_array
 
 def getCornerPoints(obstacle_quat, robot_quat):
@@ -164,8 +162,6 @@ def getCornerPoints(obstacle_quat, robot_quat):
     print(f"obs_yaw = {obs_yaw}") 
     print(f"robot_yaw = {robot_yaw}") 
     print(corner)
-
-    # print(math.cos(yaw))
 
     new_corner_x = corner[0]*math.cos(yaw) - corner[1]*math.sin(yaw) 
     new_corner_y = corner[0]*math.sin(yaw) + corner[1]*math.cos(yaw) 
@@ -186,7 +182,6 @@ def gen_callback(msg):
     obstacle.odom.pose.pose = msg.pose
     print(msg.pose)
     print(obstacle.odom.pose.pose)
-    # obstacle.odom.pose.pose.position = msg.pose.position
     obstacle.odom.header.stamp = rospy.Time.now()
     obstacle.odom.header.frame_id = "map"
     init_pub.publish(obstacle.odom)
@@ -202,12 +197,14 @@ def main():
     global obstacle
 
     rospy.init_node('obstacle_manager', anonymous=True)
+    getRays()
 
     sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, gen_callback)
+
+    sub_obstacle = rospy.Subscriber("/obstacle_init", Odometry, obs_pose_init_callback)
     robot_odom_sub = rospy.Subscriber("/odom", Odometry, robot_odom_callback)
-    sub_obstacle = rospy.Subscriber("/obstacle_init", Odometry, obs_odom_callback)
     odom_moved_sub = rospy.Subscriber('/obstacle_moved', Odometry, odom_moved_callback)
-    getRays()
+    
     br = tf.TransformBroadcaster()
 
 
@@ -217,19 +214,11 @@ def main():
     robot.odom.pose.pose.position.x = 0
     robot.odom.pose.pose.position.y = 0
     while not rospy.is_shutdown():
+        
         os.system('clear')
-
-        obstacle.odom.header.stamp = rospy.Time.now()
-        robot.odom.header.stamp=rospy.Time.now()
-
-        obs_odom_pub.publish(obstacle.odom)
-        rob_odom_pub.publish(robot.odom)
-
         rel_pose = PoseStamped()
         rel_pose.pose.position.x = obstacle.odom.pose.pose.position.x - robot.odom.pose.pose.position.x 
         rel_pose.pose.position.y = obstacle.odom.pose.pose.position.y - robot.odom.pose.pose.position.y 
-
-
 
         obs_corner = getCornerPoints(obstacle.odom.pose.pose.orientation, robot.odom.pose.pose.orientation)
         obs_corner[0] += obstacle.odom.pose.pose.position.x
@@ -240,8 +229,15 @@ def main():
         print(f"OBS CORNER {obs_corner}")
         scan_array = collision_check(robot.odom.pose.pose.position, obs_corner)
 
+
+
+        # ----------------- Publish ----------------
+        obstacle.odom.header.stamp = rospy.Time.now()
+        robot.odom.header.stamp=rospy.Time.now()
         pub_points(scan_array)
         marker_pub.publish(odom2marker(obstacle.odom))
+        obs_odom_pub.publish(obstacle.odom)
+        rob_odom_pub.publish(robot.odom)
 
 
 
