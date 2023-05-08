@@ -158,21 +158,22 @@ def getCornerPoints(obstacle_quat, robot_quat):
     robot_yaw = euler_from_quaternion([robot_quat.x, robot_quat.y, robot_quat.z, robot_quat.w])[2]
     yaw = obs_yaw 
 
-    print("----------------------------")
-    print(f"obs_yaw = {obs_yaw}") 
-    print(f"robot_yaw = {robot_yaw}") 
-    print(corner)
+    # print("----------------------------")
+    # print(f"obs_yaw = {obs_yaw}") 
+    # print(f"robot_yaw = {robot_yaw}") 
+    # print(corner)
 
     new_corner_x = corner[0]*math.cos(yaw) - corner[1]*math.sin(yaw) 
     new_corner_y = corner[0]*math.sin(yaw) + corner[1]*math.cos(yaw) 
     corner[0] = new_corner_x
     corner[1] = new_corner_y
-    print(corner)
+    # print(corner)
 
     return corner
 
 def odom_moved_callback(msg):
     global obstacle
+    print(f"RESERVED!!! {msg.pose.pose.position}")
     obstacle.odom.pose.pose.position = msg.pose.pose.position
     return
 
@@ -203,19 +204,19 @@ def main():
 
     sub_obstacle = rospy.Subscriber("/obstacle_init", Odometry, obs_pose_init_callback)
     robot_odom_sub = rospy.Subscriber("/odom", Odometry, robot_odom_callback)
-    odom_moved_sub = rospy.Subscriber('/obstacle_moved', Odometry, odom_moved_callback)
+    odom_moved_sub = rospy.Subscriber('/obstacle_moved', Odometry, odom_moved_callback, queue_size=1)
     
     br = tf.TransformBroadcaster()
 
 
     listener = tf.TransformListener()
-    rate = rospy.Rate(10) # 10hz
+    rate = rospy.Rate(30) # 10hz
 
     robot.odom.pose.pose.position.x = 0
     robot.odom.pose.pose.position.y = 0
     while not rospy.is_shutdown():
-        
-        os.system('clear')
+        rate.sleep()
+        # os.system('clear')
         rel_pose = PoseStamped()
         rel_pose.pose.position.x = obstacle.odom.pose.pose.position.x - robot.odom.pose.pose.position.x 
         rel_pose.pose.position.y = obstacle.odom.pose.pose.position.y - robot.odom.pose.pose.position.y 
@@ -224,9 +225,9 @@ def main():
         obs_corner[0] += obstacle.odom.pose.pose.position.x
         obs_corner[1] += obstacle.odom.pose.pose.position.y
 
-        print(f"Obs   pose {obstacle.odom.pose.pose}")
-        print(f"robot pose {robot.odom.pose.pose}")
-        print(f"OBS CORNER {obs_corner}")
+        # print(f"Obs   pose {obstacle.odom.pose.pose}")
+        # print(f"robot pose {robot.odom.pose.pose}")
+        # print(f"OBS CORNER {obs_corner}")
         scan_array = collision_check(robot.odom.pose.pose.position, obs_corner)
 
 

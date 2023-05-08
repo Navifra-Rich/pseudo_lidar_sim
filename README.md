@@ -29,8 +29,10 @@ Geometry_msgs/PoseStamped
     * pose of obstacle (you can publish this topic from rviz)
     
 Keyboard input
-    * w, a, s, d
     * Moving obstacle
+    * w, a, s, d = Moving verticle, horizon    
+    * q, e, z, c = Moving diagonal
+    * x = terminate
     
 ```
 
