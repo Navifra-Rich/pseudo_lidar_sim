@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import os
+
 import rospy
 import numpy as np
 import cv2
@@ -8,28 +10,16 @@ from nav_msgs.msg import Odometry
 from nav_msgs.msg import OccupancyGrid
 from tf.transformations import euler_from_quaternion
 from visualization_msgs.msg import Marker
-import tty, termios, os, sys, select
+import getch
 
-
-
-odom = Odometry()
+obs_odom = Odometry()
 marker = Marker()
-marker_pub = rospy.Publisher('visualization_marker', Marker, queue_size=10)
 odom_pub = rospy.Publisher('/obstacle_moved', Odometry, queue_size=10)
 
-# odom.header.frame_id="map"
-# odom.child_frame_id="obstacle"
+obs_odom.header.frame_id="map"
+obs_odom.child_frame_id="obstacle"
 
-def getKey():
-    tty.setraw(sys.stdin.fileno())
-    rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
-    if rlist:
-        key = sys.stdin.read(1)
-    else:
-        key = ''
 
-    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, termios.tcgetattr(sys.stdin))
-    return key
 
 def png_reader():
     map_image = cv2.imread('/home/hgnaseel/catkin_ws/src/pseudo_lidar_sim/pl_visualizer/data/map.png', cv2.IMREAD_GRAYSCALE)
@@ -69,65 +59,47 @@ def png_reader():
     pub = rospy.Publisher('map', OccupancyGrid, queue_size=10)
     pub.publish(map_msg)
 
-def odom2marker(odom):
-    marker = Marker()
-    marker.header = odom.header
-    marker.type = Marker.CUBE
-    marker.pose = odom.pose.pose
-    marker.scale.x = 1.0
-    marker.scale.y = 0.6
-    marker.scale.z = 1.0
-    marker.color.a = 1.0
-    marker.color.r = 0.0
-    marker.color.g = 1.0
-    marker.color.b = 0.0
-    return marker
 
-def rotate(quat):
-    euler_from_quaternion(quat)
-    return
+
 
 def keyboard_input():
-
-    key = getKey()
+    print("HERE")
+    key = getch.getch()
     if key == 'w' :
         print("Up arrow is pressed")
-        odom.pose.pose.position.x +=0.1
+        obs_odom.pose.pose.position.x +=0.1
 
     elif key == 's' :
         print("Down arrow is pressed")
-        odom.pose.pose.position.x -=0.1
+        obs_odom.pose.pose.position.x -=0.1
 
     elif key == 'a' :
-        odom.pose.pose.position.y +=0.1
+        obs_odom.pose.pose.position.y +=0.1
         print("Left arrow is pressed")
 
     elif key == 'd' :
-        odom.pose.pose.position.y -=0.1
+        obs_odom.pose.pose.position.y -=0.1
         print("Right arrow is pressed")
 
     elif key == 'q' :
-        odom.pose.pose.position.y -=0.1
+        obs_odom.pose.pose.position.y +=0.1
         print("Turn left")
 
     elif key == 'e' :
-        odom.pose.pose.position.y -=0.1
+        obs_odom.pose.pose.position.y -=0.1
         print("Turn left")
+
     elif key == 'c' :
         rospy.signal_shutdown("CCC")
         return
-    
-    os.system('clear')
-    print("INPUT")
     print(key)
-    odom.header.stamp = rospy.Time.now()
-    marker_pub.publish(odom2marker(odom))
-    odom_pub.publish(odom)
+    os.system('clear')
 
-def obs_odom_callback(msg):
-    global odom
-    odom=msg
-    return
+    obs_odom.header.stamp = rospy.Time.now()
+    odom_pub.publish(obs_odom)
+
+
+
 
 def odom_callback(msg):
     map.pose = msg.pose
@@ -137,9 +109,6 @@ def odom_callback(msg):
 def main():
 
     rospy.init_node('map_generator', anonymous=True)
-    # map = MAP()
-    sub = rospy.Subscriber("/odom", Odometry, odom_callback)
-    sub_obstacle = rospy.Subscriber("/obstacle_init", Odometry, obs_odom_callback)
 
 
     rate = rospy.Rate(100) # 10hz
@@ -147,12 +116,9 @@ def main():
         png_reader()
 
     while not rospy.is_shutdown():
-
         keyboard_input()
-        # print(map.map)
-        # print(map.pose)
-        # print("HJI")
-        # rate.sleep()
+
+
 
 if __name__ == '__main__':
     main()
