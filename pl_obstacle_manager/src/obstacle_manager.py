@@ -8,21 +8,23 @@ from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import PointCloud2, PointField
 from geometry_msgs.msg import TransformStamped
 from tf.transformations import euler_from_quaternion
+from visualization_msgs.msg import Marker
 
 import math
 from nav_msgs.msg import Odometry
 import os
 import struct
 import random
-SIZEX = 1.0
-SIZEY = 0.6
 
+
+# ------------------------------ Param ------------------------------------
+SIZEX = 1.9
+SIZEY = 0.6
+LASER_RANGE = 100.0
 class Object:
     def __init__(self):
         self.odom = Odometry()
         self.odom.header.frame_id="map"
-        # self.odom.pose.pose.position.x=0
-        # self.odom.pose.pose.position.y=0
         self.odom.pose.pose.orientation.w=1
         return
 
@@ -30,6 +32,7 @@ class Object:
 init_pub = rospy.Publisher("/obstacle_init", Odometry)
 obs_odom_pub = rospy.Publisher("/obstacle_odom", Odometry)
 rob_odom_pub = rospy.Publisher("/robot_odom", Odometry)
+marker_pub = rospy.Publisher('visualization_marker', Marker, queue_size=10)
 
 obstacle = Object()
 robot = Object()
@@ -39,10 +42,28 @@ ray_y = []
 def getRays():
     # 거리 값 배열 생성
     for i in range(0, 629):
-        ray_x.append(100.0*math.cos(i/100))  # 거리 값은 10으로 설정
-        ray_y.append(100.0*math.sin(i/100))  # 거리 값은 10으로 설정
+        ray_x.append(LASER_RANGE*math.cos(i/100))  # 거리 값은 10으로 설정
+        ray_y.append(LASER_RANGE*math.sin(i/100))  # 거리 값은 10으로 설정
 
     return ray_x, ray_y
+
+def obs_odom_callback(msg):
+    obstacle.odom=msg
+    return
+
+def odom2marker(obs_odom):
+    marker = Marker()
+    marker.header = obs_odom.header
+    marker.type = Marker.CUBE
+    marker.pose = obs_odom.pose.pose
+    marker.scale.x = SIZEX
+    marker.scale.y = SIZEY
+    marker.scale.z = 1.0
+    marker.color.a = 1.0
+    marker.color.r = 0.0
+    marker.color.g = 1.0
+    marker.color.b = 0.0
+    return marker
 
 def pub_points(points):
     # PointCloud 메시지 생성
@@ -72,15 +93,11 @@ def pub_points(points):
         # print(point)
         # 바이트 변환하여 PointCloud 메시지에 추가
         msg.data += struct.pack('ffff', *point)
-    pub = rospy.Publisher("sibal", PointCloud2)
+    pub = rospy.Publisher("pseudo_scan", PointCloud2)
     pub.publish(msg)
     return msg
 
 def line_intersection(x1, y1, x2, y2, x3, y3, x4, y4):
-    # x1,y1 = p1
-    # x2,y2 = p2
-    # x3,y3 = p3
-    # x4,y4 = p4
     denom = (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1)
     if denom == 0: # parallel
         return None
@@ -94,33 +111,33 @@ def line_intersection(x1, y1, x2, y2, x3, y3, x4, y4):
     y = y1 + ua * (y2-y1)
     return (x,y)
 
-def collision_check(corner):
+def collision_check(robot, corner):
     scan_array = []
     for i in range(len(ray_x)):
         min_dist = 99999
         scanned_points = None
         # print("HERE")
-        pos = line_intersection(0, 0, ray_x[i], ray_y[i], corner[0,0], corner[1,0], corner[0,1], corner[1,1])
+        pos = line_intersection(robot.x, robot.y, ray_x[i], ray_y[i], corner[0,0], corner[1,0], corner[0,1], corner[1,1])
         if pos is not None:
-            dist = pos[0]*pos[0]+pos[1]*pos[1]
+            dist = (pos[0]-robot.x)*(pos[0]-robot.x)+(pos[1]-robot.y)*(pos[1]-robot.y)
             if dist<min_dist:
                 min_dist=dist
                 scanned_points=pos
-        pos = line_intersection(0, 0, ray_x[i], ray_y[i], corner[0,1], corner[1,1], corner[0,3], corner[1,3])
+        pos = line_intersection(robot.x, robot.y, ray_x[i], ray_y[i], corner[0,1], corner[1,1], corner[0,3], corner[1,3])
         if pos is not None:
-            dist = pos[0]*pos[0]+pos[1]*pos[1]
+            dist = (pos[0]-robot.x)*(pos[0]-robot.x)+(pos[1]-robot.y)*(pos[1]-robot.y)
             if dist<min_dist:
                 min_dist=dist
                 scanned_points=pos
-        pos = line_intersection(0, 0, ray_x[i], ray_y[i], corner[0,0], corner[1,0], corner[0,2], corner[1,2])
+        pos = line_intersection(robot.x, robot.y, ray_x[i], ray_y[i], corner[0,0], corner[1,0], corner[0,2], corner[1,2])
         if pos is not None:
-            dist = pos[0]*pos[0]+pos[1]*pos[1]
+            dist = (pos[0]-robot.x)*(pos[0]-robot.x)+(pos[1]-robot.y)*(pos[1]-robot.y)
             if dist<min_dist:
                 min_dist=dist
                 scanned_points=pos
-        pos = line_intersection(0, 0, ray_x[i], ray_y[i], corner[0,2], corner[1,2], corner[0,3], corner[1,3])
+        pos = line_intersection(robot.x, robot.y, ray_x[i], ray_y[i], corner[0,2], corner[1,2], corner[0,3], corner[1,3])
         if pos is not None:
-            dist = pos[0]*pos[0]+pos[1]*pos[1]
+            dist = (pos[0]-robot.x)*(pos[0]-robot.x)+(pos[1]-robot.y)*(pos[1]-robot.y)
             if dist<min_dist:
                 min_dist=dist
                 scanned_points=pos
@@ -131,22 +148,21 @@ def collision_check(corner):
     # print(scan_array)
     return scan_array
 
-def getCornerPoints(quat):
+def getCornerPoints(obstacle_quat, robot_quat):
     corner = np.zeros((2,4))
     corner[0,0] = corner[0,2] = -SIZEX/2
     corner[0,1] = corner[0,3] = SIZEX/2
 
     corner[1,0] = corner[1,1] = SIZEY/2
     corner[1,2] = corner[1,3] = -SIZEY/2
-    print(quat)
-    print(quat.x)
-    print(quat.y)
-    print(quat.z)
-    print(quat.w)
-    print(euler_from_quaternion([quat.x, quat.y, quat.z, quat.w]))
-    yaw = euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])[2]
+
+    obs_yaw = euler_from_quaternion([obstacle_quat.x, obstacle_quat.y, obstacle_quat.z, obstacle_quat.w])[2]
+    robot_yaw = euler_from_quaternion([robot_quat.x, robot_quat.y, robot_quat.z, robot_quat.w])[2]
+    yaw = obs_yaw 
+
     print("----------------------------")
-    print(f"yaw = {yaw}") 
+    print(f"obs_yaw = {obs_yaw}") 
+    print(f"robot_yaw = {robot_yaw}") 
     print(corner)
 
     # print(math.cos(yaw))
@@ -177,12 +193,19 @@ def gen_callback(msg):
     print("----------------------------")
     return
 
+def robot_odom_callback(msg):
+    robot.odom=msg
+    robot.odom.header.frame_id = "map"
+    return
+
 def main():
     global obstacle
 
     rospy.init_node('obstacle_manager', anonymous=True)
 
     sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, gen_callback)
+    robot_odom_sub = rospy.Subscriber("/odom", Odometry, robot_odom_callback)
+    sub_obstacle = rospy.Subscriber("/obstacle_init", Odometry, obs_odom_callback)
     odom_moved_sub = rospy.Subscriber('/obstacle_moved', Odometry, odom_moved_callback)
     getRays()
     br = tf.TransformBroadcaster()
@@ -190,23 +213,14 @@ def main():
 
     listener = tf.TransformListener()
     rate = rospy.Rate(10) # 10hz
-    # obstacle.odom.pose.pose.position.x = 6
-    # obstacle.odom.pose.pose.position.y = 3
 
     robot.odom.pose.pose.position.x = 0
     robot.odom.pose.pose.position.y = 0
     while not rospy.is_shutdown():
         os.system('clear')
-        # print("Loop")
-        # continue
-        # obstacle.odom.pose.pose.orientation.x = 0.258819
-        # obstacle.odom.pose.pose.orientation.y = 0
-        # obstacle.odom.pose.pose.orientation.z = 0
-        # obstacle.odom.pose.pose.orientation.w = 0.9659258
 
         obstacle.odom.header.stamp = rospy.Time.now()
         robot.odom.header.stamp=rospy.Time.now()
-        # print(obstacle.odom.pose.pose.orientation)
 
         obs_odom_pub.publish(obstacle.odom)
         rob_odom_pub.publish(robot.odom)
@@ -217,26 +231,17 @@ def main():
 
 
 
-        obs_corner = getCornerPoints(obstacle.odom.pose.pose.orientation)
-        obs_corner[0] += rel_pose.pose.position.x
-        obs_corner[1] += rel_pose.pose.position.y
-
+        obs_corner = getCornerPoints(obstacle.odom.pose.pose.orientation, robot.odom.pose.pose.orientation)
+        obs_corner[0] += obstacle.odom.pose.pose.position.x
+        obs_corner[1] += obstacle.odom.pose.pose.position.y
 
         print(f"Obs   pose {obstacle.odom.pose.pose}")
         print(f"robot pose {robot.odom.pose.pose}")
         print(f"OBS CORNER {obs_corner}")
-        scan_array = collision_check(obs_corner)
-        print(f"OOOOOOOOOOOOOOOOOOOOOOOO         {obstacle.odom.pose.pose.orientation}")
+        scan_array = collision_check(robot.odom.pose.pose.position, obs_corner)
 
         pub_points(scan_array)
-        
-        # print("Translation: ", trans)
-        # print("Rotation: ", rot)
-        # except (tf.LookupException, tf.ConnectivityException):
-        #     continue
-# 두 Pose 간의 tf 구하기
-        # listener.waitForTransform("obstacle", "robot", rospy.Time(), rospy.Duration(4.0))
-        # (trans, rot) = listener.lookupTransform("obstacle", "robot", rospy.Time())
+        marker_pub.publish(odom2marker(obstacle.odom))
 
 
 
