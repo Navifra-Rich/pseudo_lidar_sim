@@ -33,7 +33,7 @@ class Object:
 init_pub = rospy.Publisher("/obstacle_init", Odometry)
 obs_odom_pub = rospy.Publisher("/obstacle_odom", Odometry)
 rob_odom_pub = rospy.Publisher("/robot_odom", Odometry)
-marker_pub = rospy.Publisher('visualization_marker', Marker, queue_size=10)
+marker_pub = rospy.Publisher('/visualization_marker', Marker, queue_size=10)
 
 obstacle = Object()
 robot = Object()
@@ -93,7 +93,7 @@ def pub_points(points):
         # print(point)
         # 바이트 변환하여 PointCloud 메시지에 추가
         msg.data += struct.pack('ffff', *point)
-    pub = rospy.Publisher("pseudo_scan", PointCloud2)
+    pub = rospy.Publisher("/pseudo_scan", PointCloud2)
     pub.publish(msg)
     return msg
 

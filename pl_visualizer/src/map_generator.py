@@ -9,11 +9,9 @@ import cv2
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import OccupancyGrid
 from tf.transformations import euler_from_quaternion
-from visualization_msgs.msg import Marker
 import getch
 
 obs_odom = Odometry()
-marker = Marker()
 odom_pub = rospy.Publisher('/obstacle_moved', Odometry, queue_size=10)
 
 obs_odom.header.frame_id="map"
