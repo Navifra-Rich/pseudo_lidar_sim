@@ -60,9 +60,9 @@ def png_reader():
     for i in range(map_data.shape[0]):
         for j in range(map_data.shape[1]):
             if map_data[i, j] < 128:
-                map_msg.data[i * map_data.shape[1] + j] = 100
+                map_msg.data[(map_data.shape[0] - i-1 ) * map_data.shape[1] + j] = 100
             else:
-                map_msg.data[i * map_data.shape[1] + j] = 0
+                map_msg.data[(map_data.shape[0] - i-1 ) * map_data.shape[1] + j] = 0
 
     # map 토픽으로 메시지 발행
     pub = rospy.Publisher('map', OccupancyGrid, queue_size=10)
@@ -92,51 +92,51 @@ def keyboard_input():
     
     if not INPUTMODE:
         return
-    print("HERE")
+    # print("HERE")
     key = getch2()
     # key = getch.getch()
     if key == 'w' :
-        print("Up arrow is pressed")
+        # print("Up arrow is pressed")
         obs_odom.pose.pose.position.x +=MOVING_SPEED
 
     elif key == 's' :
-        print("Down arrow is pressed")
+        # print("Down arrow is pressed")
         obs_odom.pose.pose.position.x -=MOVING_SPEED
 
     elif key == 'a' :
         obs_odom.pose.pose.position.y +=MOVING_SPEED
-        print("Left arrow is pressed")
+        # print("Left arrow is pressed")
 
     elif key == 'd' :
         obs_odom.pose.pose.position.y -=MOVING_SPEED
-        print("Right arrow is pressed")
+        # print("Right arrow is pressed")
 
     elif key == 'q' :
         obs_odom.pose.pose.position.x +=MOVING_SPEED
         obs_odom.pose.pose.position.y +=MOVING_SPEED
-        print("Right + Up")
+        # print("Right + Up")
 
     elif key == 'e' :
         obs_odom.pose.pose.position.x +=MOVING_SPEED
         obs_odom.pose.pose.position.y -=MOVING_SPEED
-        print("Left + Up")
+        # print("Left + Up")
 
     elif key == 'z' :
         obs_odom.pose.pose.position.x -=MOVING_SPEED
         obs_odom.pose.pose.position.y +=MOVING_SPEED
-        print("Right + Up")
+        # print("Right + Up")
 
     elif key == 'c' :
         obs_odom.pose.pose.position.x -=MOVING_SPEED
         obs_odom.pose.pose.position.y -=MOVING_SPEED
-        print("Left + Up")
+        # print("Left + Up")
 
     elif key== '\x1b[A':
-        print("Speed Up")
+        # print("Speed Up")
         MOVING_SPEED += 0.1
 
     elif key== '\x1b[B':
-        print("Speed Down")
+        # print("Speed Down")
         MOVING_SPEED -= 0.1
 
     elif key=='x':
@@ -144,8 +144,8 @@ def keyboard_input():
     else:
         return
     
-    print(f"Input Key    = {key}")
-    print(f"Moving Speed = {MOVING_SPEED}")
+    # print(f"Input Key    = {key}")
+    # print(f"Moving Speed = {MOVING_SPEED}")
     # os.system('clear')
 
     obs_odom.header.stamp = rospy.Time.now()
