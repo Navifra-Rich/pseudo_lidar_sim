@@ -6,7 +6,7 @@ import numpy as np
 import tf
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import PointCloud2, PointField
-from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import TransformStamped, PoseWithCovarianceStamped
 from tf.transformations import euler_from_quaternion
 from visualization_msgs.msg import Marker
 
@@ -190,8 +190,9 @@ def gen_callback(msg):
     return
 
 def robot_odom_callback(msg):
-    robot.odom=msg
+    robot.odom.pose=msg.pose
     robot.odom.header.frame_id = "map"
+    # print(msg)
     return
 
 def main():
@@ -203,7 +204,7 @@ def main():
     sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, gen_callback)
 
     sub_obstacle = rospy.Subscriber("/obstacle_init", Odometry, obs_pose_init_callback)
-    robot_odom_sub = rospy.Subscriber("/odom", Odometry, robot_odom_callback)
+    robot_odom_sub = rospy.Subscriber("/localization/robot_pos", PoseWithCovarianceStamped, robot_odom_callback)
     odom_moved_sub = rospy.Subscriber('/obstacle_moved', Odometry, odom_moved_callback, queue_size=1)
     
     br = tf.TransformBroadcaster()
@@ -212,8 +213,8 @@ def main():
     listener = tf.TransformListener()
     rate = rospy.Rate(30) # 10hz
 
-    robot.odom.pose.pose.position.x = 0
-    robot.odom.pose.pose.position.y = 0
+    # robot.odom.pose.pose.position.x = 0
+    # robot.odom.pose.pose.position.y = 0
     while not rospy.is_shutdown():
         rate.sleep()
         # os.system('clear')
