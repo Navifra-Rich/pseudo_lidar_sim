@@ -2,8 +2,8 @@
     
     <param name="/use_sim_time" value="false" />
 
-    <param name="obstacle_size_x" value="5.0" />
-    <param name="obstacle_size_y" value="0.6" />
+    <param name="obstacle_size_x" value="0.8" />
+    <param name="obstacle_size_y" value="0.8" />
 
     <param name="laser_range" value="100.0" />
 

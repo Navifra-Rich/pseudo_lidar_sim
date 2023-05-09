@@ -29,7 +29,9 @@ def obs_pose_init_callback(msg):
     return
 
 def png_reader():
-    map_image = cv2.imread('/home/hgnaseel/catkin_ws/src/pseudo_lidar_sim/pl_visualizer/data/map.png', cv2.IMREAD_GRAYSCALE)
+    homedir = os.path.expanduser('~')
+    default_path = '/navifraUI/map/latest/map.png'
+    map_image = cv2.imread(homedir+default_path, cv2.IMREAD_GRAYSCALE)
     
     # 이미지 데이터를 0과 255 사이의 값으로 정규화
     map_image = cv2.normalize(map_image, None, 0, 255, cv2.NORM_MINMAX)
